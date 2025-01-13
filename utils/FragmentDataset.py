@@ -2,8 +2,7 @@ import glob
 from torch.utils.data import Dataset
 import numpy as np
 import pyvox.parser
-import scipy 
-from scipy.stats import mode
+import os
 
 ## Implement the Voxel Dataset Class
 
@@ -41,16 +40,22 @@ from scipy.stats import mode
 '''
 
 class FragmentDataset(Dataset):
-    def __init__(self, vox_path, vox_type, dim_size=64, transform=None):
+    def __init__(self, vox_path="./data", vox_type='vox', resolution=64, train=True, transform=None):
         #  you may need to initialize self.vox_type, self.vox_path, self.transform, self.dim_size, self.vox_files
         # self.vox_files is a list consists all file names (can use sorted() method and glob.glob())
         # please delete the "return" in __init__
         # TODO
         self.vox_path = vox_path
         self.vox_type = vox_type
-        self.dim_size = dim_size
+        self.dim_size = resolution
         self.transform = transform
-        self.vox_files = sorted(glob.glob(f"{vox_path}/*.{vox_type}"))
+        self.train = train
+        if self.train:
+            train_folder = os.path.join(vox_path, "train")
+            self.vox_files = sorted(glob.glob(f"{train_folder}/**/*.{vox_type}", recursive=True))
+        else:
+            test_folder = os.path.join(vox_path, "test")
+            self.vox_files = sorted(glob.glob(f"{test_folder}/**/*.{vox_type}", recursive=True))
 
         if not self.vox_files:
             raise ValueError(f"No {vox_type} files found in the specified directory.")
