@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from utils.model import Generator, Discriminator
-from visualize import *
+from utils.visualize import *
 
 # Try to implement proper metric for test function
 def DSC(prediction, target):

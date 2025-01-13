@@ -11,6 +11,7 @@ from torch.utils import data
 from torch import nn
 from torch.utils.data import DataLoader
 from utils.FragmentDataset import FragmentDataset
+from torchvision import datasets, transforms
 from utils.model import Generator, Discriminator
 from utils.model_utils import generate, DSC, JD, MSE
 import click

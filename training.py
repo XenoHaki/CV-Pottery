@@ -24,9 +24,14 @@ from torch.utils.data import DataLoader
 from torch.utils.data import DataLoader
 from utils.FragmentDataset import FragmentDataset
 from utils.model import Generator, Discriminator
+from utils.visualize import *
+from torchvision import datasets, transforms
+from torch.utils.tensorboard import SummaryWriter
+torch.autograd.set_detect_anomaly(True)
+writer = SummaryWriter()
 import click
 import argparse
-from .test import *
+from test import *
 
 def train(args):
     ### Here is a simple demonstration argparse, you may customize your own implementations, and
@@ -45,7 +50,7 @@ def train(args):
     # 12. device!
     # .... (maybe there exists more hyperparams to be appointed)
     Z_latent_space = 64
-    epochs = 100
+    epochs = 30
     loss_function = 'BCE'
     generator_learning_rate = 0.002
     discriminator_learning_rate = 0.0002
@@ -53,7 +58,7 @@ def train(args):
     optimizer = 'ADAM'
     beta1 = 0.9
     beta2 = 0.999
-    batch_size = 64
+    batch_size = 32
     available_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_dir = "./data"
     result_save_dir = "./result"
@@ -95,7 +100,6 @@ def train(args):
             real_vox = data[0].to(available_device).float()
             real_frag = real_frag.unsqueeze(1)
             real_vox = real_vox.unsqueeze(1)
-            batch_size = real_frag.size(0)
             
             real_labels = torch.ones(batch_size, 1).to(available_device)
             fake_labels = torch.zeros(batch_size, 1).to(available_device)
@@ -109,7 +113,15 @@ def train(args):
 
             #z = torch.randn(batch_size, Z_latent_space).to(available_device)
             fake_data = G(real_frag)
-            print(fake_data.shape)
+            plot_join(fake_data.cpu().detach().numpy()[0][0], real_frag.cpu().detach().numpy()[0][0], "./figures/test", i)
+            z = real_frag.cpu().detach().numpy()
+            x_ = fake_data.cpu().detach().numpy()
+            y = np.zeros_like(z)
+            y = np.where((x_ > 0) & (z > 0), 1, y)
+            #print(fake_data.shape)
+            fake_data = torch.tensor(y).to(available_device)
+            #print(fake_data.shape)
+            #print(fake_data.cpu().detach().numpy()[0][0].dtype())
 
             outputs_fake = D(fake_data.detach())
             loss_D_fake = criterion(outputs_fake, fake_labels)
@@ -134,14 +146,22 @@ def train(args):
             if i % 100 == 0:
                 print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
                       f"Loss D: {loss_D.item():.4f}, Loss G: {loss_G.item():.4f}")
+                #plot_join(fake_data.cpu().detach().numpy()[0][0], real_vox.cpu().detach().numpy()[0][0], "./figures", (epoch+1) + (i // 100) / 10 )
         # Print epoch loss
+        writer.add_scalar('Loss D/Epoch',loss_D/len(train_loader),epoch+1)
+        writer.add_scalar('Loss G/Epoch',loss_G/len(train_loader),epoch+1)
         print(f"Epoch {epoch+1}/{epochs} - Loss D: {running_loss_D/len(train_loader):.4f}, Loss G: {running_loss_G/len(train_loader):.4f}")
         
         # also you may save checkpoints in specific numbers of iterartions
-        if (epoch + 1) % epochs == 0:
+        if (epoch + 1) % 5 == 0:
             torch.save(G.state_dict(), os.path.join(result_save_dir, f"generator_epoch_{epoch+1}.pth"))
             torch.save(D.state_dict(), os.path.join(result_save_dir, f"discriminator_epoch_{epoch+1}.pth"))
-            # test_model(G, epoch + 1, result_save_dir)  # You can call your test function here
+            test_DSC, test_JD, test_MSE = test(G, epoch + 1, result_save_dir)  # You can call your test function here
+            writer.add_scalar('DSC/Epoch',test_DSC,epoch+1)
+            writer.add_scalar('JD/Epoch',test_JD,epoch+1)
+            writer.add_scalar('MSE/Epoch',test_MSE,epoch+1)
+            print(f"Epoch {epoch+1}/{epochs} - DSC: {test_DSC}, JD: {test_JD}, MSE: {test_MSE}")
+
         
 
 if __name__ == "__main__":
@@ -158,5 +178,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.run == 'train':
         train(args)
+        writer.flush()
     elif args.run == 'test':
         test(args)
+    writer.close()
+
+# tensorboard --logdir=runs
+# python training --run=train
