@@ -113,7 +113,7 @@ def train(args):
 
             #z = torch.randn(batch_size, Z_latent_space).to(available_device)
             fake_data = G(real_frag)
-            plot_join(fake_data.cpu().detach().numpy()[0][0], real_frag.cpu().detach().numpy()[0][0], "./figures/test", i)
+            #plot_join(fake_data.cpu().detach().numpy()[0][0], real_frag.cpu().detach().numpy()[0][0], "./figures/test", i)
             z = real_frag.cpu().detach().numpy()
             x_ = fake_data.cpu().detach().numpy()
             y = np.zeros_like(z)
@@ -146,7 +146,7 @@ def train(args):
             if i % 100 == 0:
                 print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
                       f"Loss D: {loss_D.item():.4f}, Loss G: {loss_G.item():.4f}")
-                #plot_join(fake_data.cpu().detach().numpy()[0][0], real_vox.cpu().detach().numpy()[0][0], "./figures", (epoch+1) + (i // 100) / 10 )
+                plot_join(fake_data.cpu().detach().numpy()[0][0], real_vox.cpu().detach().numpy()[0][0], "./figures", (epoch+1) + (i // 100) / 10 )
         # Print epoch loss
         writer.add_scalar('Loss D/Epoch',loss_D/len(train_loader),epoch+1)
         writer.add_scalar('Loss G/Epoch',loss_G/len(train_loader),epoch+1)
