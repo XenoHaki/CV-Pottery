@@ -22,15 +22,15 @@ class Discriminator(torch.nn.Module):
         # Dele return in __init__
         # TODO
         super().__init__()
-        self.conv1=nn.Conv3d(in_channels=1,out_channels=32,kernel_size=3,stride=2,padding=1)
-        self.bn1=nn.BatchNorm3d(32)
-        self.conv2=nn.Conv3d(in_channels=32,out_channels=64,kernel_size=3,stride=2,padding=1)
-        self.bn2=nn.BatchNorm3d(64)
-        self.conv3=nn.Conv3d(in_channels=64,out_channels=128,kernel_size=3,stride=2,padding=1)
-        self.bn3=nn.BatchNorm3d(128)
-        self.conv4=nn.Conv3d(in_channels=128,out_channels=256,kernel_size=3,stride=2,padding=1)#2*2*2,channel=512
-        self.bn4=nn.BatchNorm3d(256)
-        self.conv5=nn.Conv3d(in_channels=256,out_channels=1,kernel_size=3,stride=2,padding=1)        
+        self.conv1 = nn.Conv3d(in_channels=1, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.bn1 = nn.BatchNorm3d(32)
+        self.conv2 = nn.Conv3d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.bn2 = nn.BatchNorm3d(64)
+        self.conv3 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1)
+        self.bn3 = nn.BatchNorm3d(128)
+        self.conv4 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1) # 2*2*2,channel=512
+        self.bn4 = nn.BatchNorm3d(256)
+        self.conv5 = nn.Conv3d(in_channels=256, out_channels=1, kernel_size=3, stride=2, padding=1)        
         return
     
     
@@ -55,7 +55,7 @@ class Discriminator(torch.nn.Module):
     
 class Generator(torch.nn.Module):
     # TODO
-    def __init__(self, cube_len=32, z_latent_space=64, z_intern_space=64):#input(b,1,32,32,32) output(b,1,32,32,32)
+    def __init__(self, cube_len=32, z_latent_space=64, z_intern_space=64): # input(b,1,32,32,32) output(b,1,32,32,32)
         # similar to Discriminator
         # Despite the blocks introduced above, you may also find torch.nn.ConvTranspose3d()
         # Dele return in __init__
@@ -80,22 +80,45 @@ class Generator(torch.nn.Module):
         self.deconv4=nn.ConvTranspose3d(in_channels=32,out_channels=1,kernel_size=4,stride=2,padding=1)#32*32*32 rebuild
         self.bn8=nn.BatchNorm3d(1)
         # TODO
+        # encode
+        self.conv1 = nn.Conv3d(in_channels=1,out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.bn1 = nn.BatchNorm3d(32)
+        self.conv2 = nn.Conv3d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.bn2 = nn.BatchNorm3d(64)
+        self.conv3 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1)
+        self.bn3 = nn.BatchNorm3d(128)
+        self.conv4 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1) # 2*2*2, channel=256
+        self.bn4 = nn.BatchNorm3d(256)
+        # full-connected
+        self.fc1 = nn.Linear(in_features=4*4*4*256, out_features=z_latent_space)
+        self.fc2 = nn.Linear(in_features=z_latent_space, out_features=z_intern_space)
+        self.fc3 = nn.Linear(in_features=z_intern_space, out_features=256*4*4*4)
+        # decode
+        self.deconv1 = nn.ConvTranspose3d(in_channels=256, out_channels=128, kernel_size=3, stride=2, padding=1) # 4*4*4, channel=128
+        self.bn5 = nn.BatchNorm3d(128)
+        self.deconv2 = nn.ConvTranspose3d(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.bn6 = nn.BatchNorm3d(64)
+        self.deconv3 = nn.ConvTranspose3d(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.bn7 = nn.BatchNorm3d(32)
+        self.deconv4 = nn.ConvTranspose3d(in_channels=32, out_channels=1, kernel_size=3, stride=2, padding=1)#32*32*32 rebuild
+        self.bn8 = nn.BatchNorm3d(1)
         return
     
     def forward(self, x):
         # you may also find torch.view() useful
         # we strongly suggest you to write this method seperately to forward_encode(self, x) and forward_decode(self, x)
         def forward_encode(x):
-            x=self.bn1(self.conv1(x))
-            x=F.leaky_relu(x,negative_slope=0.2)
-            x=self.bn2(self.conv2(x))
-            x=F.leaky_relu(x,negative_slope=0.2)
-            x=self.bn3(self.conv3(x))
-            x=F.leaky_relu(x,negative_slope=0.2)
-            x=self.bn4(self.conv4(x))
-            x=F.leaky_relu(x,negative_slope=0.2)
-            x=torch.flatten(x,1)  
+            x = self.bn1(self.conv1(x))
+            x = F.leaky_relu(x, negative_slope=0.2)
+            x = self.bn2(self.conv2(x))
+            x = F.leaky_relu(x, negative_slope=0.2)
+            x = self.bn3(self.conv3(x))
+            x = F.leaky_relu(x, negative_slope=0.2)
+            x = self.bn4(self.conv4(x))
+            x = F.leaky_relu(x, negative_slope=0.2)
+            x = torch.flatten(x, 1)  
             return x
+        
         def forward_decode(x):
             x=self.bn5(self.deconv1(x))
             x=F.relu(x)
