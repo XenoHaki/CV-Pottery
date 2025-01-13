@@ -12,7 +12,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from utils.FragmentDataset import FragmentDataset
 from utils.model import Generator, Discriminator
-from utils.model_utils import generate
+from utils.model_utils import generate, DSC, JD, MSE
 import click
 import argparse
 
@@ -45,7 +45,9 @@ def test(G, epoch):
     G.eval()
     correct = 0
     total = 0
-    test_loss = 0.0
+    test_DSC = 0.0
+    test_JD = 0.0
+    test_MSE = 0.0
     criterion = nn.BCEWithLogitsLoss()
     with torch.no_grad():
         for i, data in tqdm(enumerate(test_loader), total=len(test_loader)):
@@ -55,11 +57,16 @@ def test(G, epoch):
             real_vox = real_vox.unsqueeze(1)
             batch_size = real_frag.size(0)
             
-            gener_frag = generate(G, real_vox)
+            fake, mesh_frag = generate(G, real_vox)
+            test_DSC += DSC(fake, real_frag)
+            test_JD += JD(fake, real_frag)
+            test_MSE += MSE(fake, real_frag)
 
+        test_DSC /= total
+        test_JD /= total
+        test_MSE /= total
+        print(f'Test Avg DSC: {test_DSC}')
+        print(f'Test Avg JD: {test_JD}')
+        print(f'Test Avg MSE: {test_MSE}')
 
-        test_loss /= len(test_loader)
-        print(f'Test Loss: {test_loss}')
-        print(f'Accuracy: {correct / total}')
-
-    return
+    return test_DSC, test_JD, test_MSE
