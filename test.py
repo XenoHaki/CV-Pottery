@@ -4,15 +4,62 @@
 
 import numpy as np
 import torch
+from tqdm import tqdm
+import os
 from torch import optim
 from torch.utils import data
 from torch import nn
+from torch.utils.data import DataLoader
 from utils.FragmentDataset import FragmentDataset
 from utils.model import Generator, Discriminator
+from utils.model_utils import generate
+import click
+import argparse
 
-def test():
+def test(G, epoch):
+    Z_latent_space = 64
+    epochs = 100
+    loss_function = 'BCE'
+    generator_learning_rate = 0.002
+    discriminator_learning_rate = 0.0002
+    initial_data_resolution = 32
+    optimizer = 'ADAM'
+    beta1 = 0.9
+    beta2 = 0.999
+    batch_size = 64
+    available_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    dataset_dir = "./data"
+    result_save_dir = "./result"
+
     # TODO
     # You can also implement this function in training procedure, but be sure to
     # evaluate the model on test set and reserve the option to save both quantitative
-    # and qualitative (generated .vox or visualizations) images.   
+    # and qualitative (generated .vox or visualizations) images. 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    G.to(device)
+    checkpoint = torch.load(os.path.join(result_save_dir, f"generator_epoch_{epoch}.pth"))
+    G.load_state_dict(checkpoint['model_state'])
+    test_dataset = FragmentDataset(dataset_dir, 'vox', resolution=initial_data_resolution, train=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    G.eval()
+    correct = 0
+    total = 0
+    test_loss = 0.0
+    criterion = nn.BCEWithLogitsLoss()
+    with torch.no_grad():
+        for i, data in tqdm(enumerate(test_loader), total=len(test_loader)):
+            real_frag = data[0].to(available_device).float()
+            real_vox = data[0].to(available_device).float()
+            real_frag = real_frag.unsqueeze(1)
+            real_vox = real_vox.unsqueeze(1)
+            batch_size = real_frag.size(0)
+            
+            gener_frag = generate(G, real_vox)
+
+
+        test_loss /= len(test_loader)
+        print(f'Test Loss: {test_loss}')
+        print(f'Accuracy: {correct / total}')
+
     return
