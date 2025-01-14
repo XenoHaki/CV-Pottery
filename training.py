@@ -99,7 +99,7 @@ def train(args):
         loss_D = 0.0
         
         for i, data in tqdm(enumerate(train_loader), total=len(train_loader)):
-            if i == 10: break
+            #if i == 10: break
             #plot(data[0][0], "./figures", 1)
             #plot(data[2][0], "./figures",66)
             #plot(data[0][0] + data[1][0], "./figures", 3)
