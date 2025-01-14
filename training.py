@@ -148,8 +148,8 @@ def train(args):
                       f"Loss D: {loss_D.item():.4f}, Loss G: {loss_G.item():.4f}")
                 plot_join(fake_data.cpu().detach().numpy()[0][0], real_vox.cpu().detach().numpy()[0][0], "./figures", (epoch+1) + (i // 100) / 10 )
         # Print epoch loss
-        writer.add_scalar('Loss D/Epoch',loss_D/len(train_loader),epoch+1)
-        writer.add_scalar('Loss G/Epoch',loss_G/len(train_loader),epoch+1)
+        writer.add_scalar('Loss D/Epoch',running_loss_D/len(train_loader),epoch+1)
+        writer.add_scalar('Loss G/Epoch',running_loss_G/len(train_loader),epoch+1)
         print(f"Epoch {epoch+1}/{epochs} - Loss D: {running_loss_D/len(train_loader):.4f}, Loss G: {running_loss_G/len(train_loader):.4f}")
         
         # also you may save checkpoints in specific numbers of iterartions
