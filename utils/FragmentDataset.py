@@ -74,18 +74,16 @@ class FragmentDataset(Dataset):
         model = parser.parse()
         res = self.dim_size
         voxel_np = model.to_dense()
+        #print(voxel_np.shape)
         if res == 32: # 下采样，选择每个2*2*2 block中最大的标签（不选最多的，防止出现一堆0）
             voxel_output = np.zeros((res, res, res), dtype=voxel_np.dtype)
             for i in range(res):
                 for j in range(res):
                     for k in range(res):
-                        block = voxel_np[i*2:(i+1)*2, j*2:(j+1)*2, k*2:(k+1)*2]
-                        non_zero_values = block[block != 0]
-                
-                        if non_zero_values.size > 0:
-                            voxel_output[i, j, k] = np.max(non_zero_values)
-                        else:
+                        if i*2 >= voxel_np.shape[0] or j*2 >= voxel_np.shape[1] or k*2 >= voxel_np.shape[2]: 
                             voxel_output[i, j, k] = 0
+                        else:
+                            voxel_output[i, j, k] = voxel_np[i*2, j*2, k*2]
 
             return voxel_output
         else: return voxel_np
