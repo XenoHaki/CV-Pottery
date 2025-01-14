@@ -50,15 +50,16 @@ def train(args):
     # 12. device!
     # .... (maybe there exists more hyperparams to be appointed)
     Z_latent_space = 64
-    epochs = 30
+    epochs = 10
     loss_function = 'BCE'
-    generator_learning_rate = 0.002
+    generator_learning_rate = 0.0005
     discriminator_learning_rate = 0.0002
     initial_data_resolution = 32
     optimizer = 'ADAM'
     beta1 = 0.9
     beta2 = 0.999
-    batch_size = 64
+    batch_size = 16
+    training_interval = 1
     available_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_dir = "./data"
     result_save_dir = "./result"
@@ -83,84 +84,102 @@ def train(args):
     ### Implement GAN Loss!!
     # TODO
     if loss_function == 'BCE':
-        criterion = nn.BCEWithLogitsLoss()
+        criterion = nn.BCELoss().to(available_device)
     
     ### Training Loop implementation
     ### You can refer to other papers / github repos for training a GAN
     # TODO
     os.makedirs(result_save_dir, exist_ok=True)
+    log_D = 0
+    log_G = 0
     for epoch in range(epochs):
         G.train()
         D.train()
-        running_loss_G = 0.0
-        running_loss_D = 0.0
+        loss_G = 0.0
+        loss_D = 0.0
         
         for i, data in tqdm(enumerate(train_loader), total=len(train_loader)):
-            real_frag = data[0].to(available_device).float()
-            real_vox = data[0].to(available_device).float()
-            real_frag = real_frag.unsqueeze(1)
-            real_vox = real_vox.unsqueeze(1)
+            if i == 10: break
+            #plot(data[0][0], "./figures", 1)
+            #plot(data[2][0], "./figures",66)
+            #plot(data[0][0] + data[1][0], "./figures", 3)
+            real_frag, real_vox_wo_frag, _ = data
+            #plot_join(real_frag[0], real_vox_wo_frag[0], "./figures", 1238)
+            real_frag = real_frag.to(available_device)
+            real_vox_wo_frag = real_vox_wo_frag.to(available_device)
+            real_frag = real_frag.unsqueeze(1).float()
+            real_vox_wo_frag = real_vox_wo_frag.unsqueeze(1).float()
+            real_vox = real_frag + real_vox_wo_frag
+            #plot(real_vox[0][0].cpu().detach().numpy(), "./figures", 1123)
             
-            real_labels = torch.ones(batch_size, 1).to(available_device)
-            fake_labels = torch.zeros(batch_size, 1).to(available_device)
+            real_labels = torch.ones(batch_size).to(available_device).float()
+            fake_labels = torch.zeros(batch_size).to(available_device).float()
         # you may call test functions in specific numbers of iterartions
         # remember to stop gradients in testing!
+        
             # Train the Discriminator
-            optimizer_D.zero_grad()
+            if epoch % (2 * training_interval) < training_interval:
 
-            outputs_real = D(real_vox)
-            loss_D_real = criterion(outputs_real, real_labels)
+                optimizer_D.zero_grad()
+                outputs_real = D(real_vox)
+                loss_D_real = criterion(outputs_real.squeeze(1), real_labels)
+                #print(outputs_real.squeeze(1))
+                #print(real_labels)
+                #print(loss_D_real)
 
-            #z = torch.randn(batch_size, Z_latent_space).to(available_device)
-            fake_data = G(real_frag)
-            #plot_join(fake_data.cpu().detach().numpy()[0][0], real_frag.cpu().detach().numpy()[0][0], "./figures/test", i)
-            z = real_frag.cpu().detach().numpy()
-            x_ = fake_data.cpu().detach().numpy()
-            y = np.zeros_like(z)
-            y = np.where((x_ > 0) | (z > 0), 1, y)
-            #print(fake_data.shape)
-            fake_data = torch.tensor(y).to(available_device)
-            #print(fake_data.shape)
-            #print(fake_data.cpu().detach().numpy()[0][0].dtype())
+                #z = torch.randn(batch_size, Z_latent_space).to(available_device)
+                fake_data = G(real_vox_wo_frag)
+                #plot_join(fake_data.cpu().detach().numpy()[0][0], real_frag.cpu().detach().numpy()[0][0], "./figures/test", i)
+                #print(fake_data.shape)
+                #print(fake_data.shape)
+                #print(fake_data.cpu().detach().numpy()[0][0].dtype())
 
-            outputs_fake = D(fake_data.detach())
-            loss_D_fake = criterion(outputs_fake, fake_labels)
+                outputs_fake = D(fake_data + real_vox_wo_frag)
+                loss_D_fake = criterion(outputs_fake.squeeze(1), fake_labels)
 
-            loss_D = loss_D_real + loss_D_fake
-            loss_D.backward()
-            optimizer_D.step()
-
+                loss_D = loss_D_real + loss_D_fake
+                loss_D.backward()
+                optimizer_D.step()
+                if i % 10 == 0:
+                    print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
+                          f"Loss D: {loss_D.item():.4f}")
+                    writer.add_scalar('Loss_D / Training', loss_D, log_D)
+                    log_D += 1
+            
+            else:
             # Train the Generator
-            optimizer_G.zero_grad()
 
-            outputs_fake = D(fake_data)
-            loss_G = criterion(outputs_fake, real_labels) # 1 - D
+                optimizer_G.zero_grad()
+                fake_data = G(real_vox_wo_frag)
+                outputs_fake = D(fake_data + real_vox_wo_frag)
+                loss_G = criterion(outputs_fake.squeeze(1), real_labels)
+                print()
+                #loss_G = torch.log_(1 - loss_G)
 
-            loss_G.backward()
-            optimizer_G.step()
+                loss_G.backward()
+                optimizer_G.step()
+                
+                if i % 10 == 0:
+                    print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
+                          f"Loss G: {loss_G.item():.4f}")
+                    writer.add_scalar('Loss_G / Training', loss_G, log_G)
+                    log_G += 1
 
-            running_loss_G += loss_G.item()
-            running_loss_D += loss_D.item()
-
-            # Logs
-            if i % 100 == 0:
-                print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
-                      f"Loss D: {loss_D.item():.4f}, Loss G: {loss_G.item():.4f}")
-                plot_join(fake_data.cpu().detach().numpy()[0][0], real_vox.cpu().detach().numpy()[0][0], "./figures", (epoch+1) + (i // 100) / 10 )
-        # Print epoch loss
-        writer.add_scalar('Loss D/Epoch',running_loss_D/len(train_loader),epoch+1)
-        writer.add_scalar('Loss G/Epoch',running_loss_G/len(train_loader),epoch+1)
-        print(f"Epoch {epoch+1}/{epochs} - Loss D: {running_loss_D/len(train_loader):.4f}, Loss G: {running_loss_G/len(train_loader):.4f}")
+            # Logs(
+        if (epoch + 1) % (training_interval * 2) == 0:
+            #print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
+                  #f"Loss D: {loss_D:.4f}, Loss G: {loss_G.item():.4f}")
+            plot_join(fake_data.cpu().detach().numpy()[0][0], real_vox.cpu().detach().numpy()[0][0], "./figures", epoch+1)
+            # Print epoch loss
+            #print(f"Epoch {epoch+1}/{epochs} - Loss D: {loss_D:.4f}, Loss G: {loss_G:.4f}")
         
         # also you may save checkpoints in specific numbers of iterartions
-        if (epoch + 1) % 5 == 0:
+        if (epoch + 1) % 2 == 0:
             torch.save(G.state_dict(), os.path.join(result_save_dir, f"generator_epoch_{epoch+1}.pth"))
             torch.save(D.state_dict(), os.path.join(result_save_dir, f"discriminator_epoch_{epoch+1}.pth"))
-            test_DSC, test_JD, test_MSE = test(G, epoch + 1)  # You can call your test function here
-            writer.add_scalar('DSC/Epoch',test_DSC,epoch+1)
-            writer.add_scalar('JD/Epoch',test_JD,epoch+1)
-            writer.add_scalar('MSE/Epoch',test_MSE,epoch+1)
-            print(f"Epoch {epoch+1}/{epochs} - DSC: {test_DSC}, JD: {test_JD}, MSE: {test_MSE}")
+            if (epoch + 1) % 10 == 0:
+                test_DSC, test_JD, test_MSE = test(G, epoch + 1)  # You can call your test function here
+                print(f"Epoch {epoch+1}/{epochs} - DSC: {test_DSC}, JD: {test_JD}, MSE: {test_MSE}")
 
         
 
@@ -186,5 +205,5 @@ if __name__ == "__main__":
     writer.close()
 
 # tensorboard --logdir=runs
-# python training.py --run=train
+# python training.py --run=train.float()
 # python training.py --run=test --epoch=5
