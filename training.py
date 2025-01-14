@@ -58,7 +58,7 @@ def train(args):
     optimizer = 'ADAM'
     beta1 = 0.9
     beta2 = 0.999
-    batch_size = 32
+    batch_size = 64
     available_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_dir = "./data"
     result_save_dir = "./result"
@@ -73,8 +73,8 @@ def train(args):
     # TODO
     G = Generator(Z_latent_space).to(available_device)
     D = Discriminator().to(available_device)
-    optimizer_G = optim.Adam(G.parameters(), lr=generator_learning_rate, betas=(beta1, beta2))
-    optimizer_D = optim.Adam(D.parameters(), lr=discriminator_learning_rate, betas=(beta1, beta2))
+    optimizer_G = optim.AdamW(G.parameters(), lr=generator_learning_rate, betas=(beta1, beta2))
+    optimizer_D = optim.AdamW(D.parameters(), lr=discriminator_learning_rate, betas=(beta1, beta2))
     
     ### Call dataloader for train and test dataset
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -117,7 +117,7 @@ def train(args):
             z = real_frag.cpu().detach().numpy()
             x_ = fake_data.cpu().detach().numpy()
             y = np.zeros_like(z)
-            y = np.where((x_ > 0) & (z > 0), 1, y)
+            y = np.where((x_ > 0) | (z > 0), 1, y)
             #print(fake_data.shape)
             fake_data = torch.tensor(y).to(available_device)
             #print(fake_data.shape)
