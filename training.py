@@ -23,48 +23,64 @@ from utils.FragmentDataset import FragmentDataset
 from utils.model import Generator, Discriminator
 import click
 import argparse
-from test import *
-### Here is a simple demonstration argparse, you may customize your own implementations, and
-# your hyperparam list MAY INCLUDE:
-# 1. Z_latent_space OK
-# 2. G_lr OK
-# 3. D_lr  (learning rate for Discriminator)  OK
-# 4. betas if you are going to use Adam optimizer  OK
-# 5. Resolution for input data OK
-# 6. Training Epochs OK
-# 7. Test per epoch OK
-# 8. Batch Size
-# 9. Dataset Dir
-# 10. Load / Save model Device
-# 11. test result save dir
-# 12. device!
-# .... (maybe there exists more hyperparams to be appointed)
-Z_latent_space = 64
-epochs = 100
-loss_function = 'BCE'
-generator_learning_rate = 0.002
-discriminator_learning_rate = 0.0002
-initial_data_resolution = 32
-optimizer = 'ADAM'
-beta1 = 0.9
-beta2 = 0.999
-batch_size = 64
-available_device = 'cuda'
-dataset_dir = "./data"
-result_save_dir = "./result"
+from .test import *
 
-train_dataset = FragmentDataset(dataset_dir, 'vox', resolution=initial_data_resolution, train=True)
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-G = Generator(Z_latent_space).to(available_device)
-D = Discriminator().to(available_device)
-optimizer_G = optim.Adam(G.parameters(), lr=generator_learning_rate, betas=(beta1, beta2))
-optimizer_D = optim.Adam(D.parameters(), lr=discriminator_learning_rate, betas=(beta1, beta2))
-criterion = nn.BCEWithLogitsLoss()
+def train(args):
+    ### Here is a simple demonstration argparse, you may customize your own implementations, and
+    # your hyperparam list MAY INCLUDE:
+    # 1. Z_latent_space
+    # 2. G_lr
+    # 3. D_lr  (learning rate for Discriminator)
+    # 4. betas if you are going to use Adam optimizer
+    # 5. Resolution for input data
+    # 6. Training Epochs
+    # 7. Test per epoch
+    # 8. Batch Size
+    # 9. Dataset Dir
+    # 10. Load / Save model Device
+    # 11. test result save dir
+    # 12. device!
+    # .... (maybe there exists more hyperparams to be appointed)
+    Z_latent_space = 64
+    epochs = 100
+    loss_function = 'BCE'
+    generator_learning_rate = 0.002
+    discriminator_learning_rate = 0.0002
+    initial_data_resolution = 32
+    optimizer = 'ADAM'
+    beta1 = 0.9
+    beta2 = 0.999
+    batch_size = 64
+    available_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    dataset_dir = "./data"
+    result_save_dir = "./result"
 
+    ### Initialize train and test dataset
+    # TODO
+    train_dataset = FragmentDataset(dataset_dir, 'vox', resolution=initial_data_resolution, train=True)
+    test_dataset = FragmentDataset(dataset_dir, 'vox', resolution=initial_data_resolution, train=False)
+    
+    ### Initialize Generator and Discriminator to specific device
+    ### Along with their optimizers
+    # TODO
+    G = Generator(Z_latent_space).to(available_device)
+    D = Discriminator().to(available_device)
+    optimizer_G = optim.Adam(G.parameters(), lr=generator_learning_rate, betas=(beta1, beta2))
+    optimizer_D = optim.Adam(D.parameters(), lr=discriminator_learning_rate, betas=(beta1, beta2))
+    
+    ### Call dataloader for train and test dataset
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-def train():
+    ### Implement GAN Loss!!
+    # TODO
+    if loss_function == 'BCE':
+        criterion = nn.BCEWithLogitsLoss()
+    
+    ### Training Loop implementation
+    ### You can refer to other papers / github repos for training a GAN
+    # TODO
     os.makedirs(result_save_dir, exist_ok=True)
-    # Training Loop
     for epoch in range(epochs):
         G.train()
         D.train()
@@ -80,16 +96,14 @@ def train():
             
             real_labels = torch.ones(batch_size, 1).to(available_device)
             fake_labels = torch.zeros(batch_size, 1).to(available_device)
-
-            # ===========================
+        # you may call test functions in specific numbers of iterartions
+        # remember to stop gradients in testing!
             # Train the Discriminator
-            # ===========================
             optimizer_D.zero_grad()
 
             outputs_real = D(real_vox)
-            
             loss_D_real = criterion(outputs_real, real_labels)
-            
+
             #z = torch.randn(batch_size, Z_latent_space).to(available_device)
             fake_data = G(real_frag)
             print(fake_data.shape)
@@ -101,9 +115,7 @@ def train():
             loss_D.backward()
             optimizer_D.step()
 
-            # ===========================
             # Train the Generator
-            # ===========================
             optimizer_G.zero_grad()
 
             outputs_fake = D(fake_data)
@@ -119,22 +131,19 @@ def train():
             if i % 100 == 0:
                 print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
                       f"Loss D: {loss_D.item():.4f}, Loss G: {loss_G.item():.4f}")
-
         # Print epoch loss
         print(f"Epoch {epoch+1}/{epochs} - Loss D: {running_loss_D/len(train_loader):.4f}, Loss G: {running_loss_G/len(train_loader):.4f}")
-
-        # Save models and results periodically
+        
+        # also you may save checkpoints in specific numbers of iterartions
         if (epoch + 1) % epochs == 0:
             torch.save(G.state_dict(), os.path.join(result_save_dir, f"generator_epoch_{epoch+1}.pth"))
             torch.save(D.state_dict(), os.path.join(result_save_dir, f"discriminator_epoch_{epoch+1}.pth"))
-            #test_model(G, epoch + 1, result_save_dir)  # You can call your test function here
+            # test_model(G, epoch + 1, result_save_dir)  # You can call your test function here
+        
 
-
-def main():
-    
-
-    parser = argparse.ArgumentParser(description='An example script with command-line arguments.')
-    #TODO (TO MODIFY, NOT CORRECT)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Train Model')
+    # TODO (TO MODIFY, NOT CORRECT)
     # 添加一个命令行参数
     parser.add_argument('--input_file', type=str, help='Path to the input file.')
     # TODO
@@ -145,34 +154,6 @@ def main():
     # 解析命令行参数
     args = parser.parse_args()
     if args.run == 'train':
-        train()
+        train(args)
     elif args.run == 'test':
-        pass
-    ### Initialize train and test dataset
-    ## for example,
-    # TODO
-    
-    ### Initialize Generator and Discriminator to specific device
-    ### Along with their optimizers
-    ## for example,
-    # TODO
-    
-    ### Call dataloader for train and test dataset
-    
-    ### Implement GAN Loss!!
-    # TODO
-    
-    ### Training Loop implementation
-    ### You can refer to other papers / github repos for training a GAN
-    # TODO
-        # you may call test functions in specific numbers of iterartions
-        # remember to stop gradients in testing!
-        
-        # also you may save checkpoints in specific numbers of iterartions
-        
-
-if __name__ == "__main__":
-    main()
-    
-
-# python training.py --run=train
+        test(args)
