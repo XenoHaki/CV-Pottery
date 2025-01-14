@@ -12,7 +12,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from utils.FragmentDataset import FragmentDataset
 from utils.model import Generator, Discriminator
-from utils.model_utils import generate, DSC, JD, MSE
+from utils.model_utils import posprocessing, generate, DSC, JD, MSE
 import click
 import argparse
 
@@ -57,7 +57,7 @@ def test(G, epoch):
             real_vox = real_vox.unsqueeze(1)
             batch_size = real_frag.size(0)
             
-            fake, mesh_frag = generate(G, real_vox)
+            fake, mesh_frag = posprocessing(generate(G, real_vox))
             test_DSC += DSC(fake, real_frag)
             test_JD += JD(fake, real_frag)
             test_MSE += MSE(fake, real_frag)
