@@ -19,7 +19,6 @@ import argparse
 
 def test(G, epoch):
     Z_latent_space = 64
-    epochs = 100
     loss_function = 'BCE'
     generator_learning_rate = 0.002
     discriminator_learning_rate = 0.0002
@@ -39,12 +38,11 @@ def test(G, epoch):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     G.to(device)
     checkpoint = torch.load(os.path.join(result_save_dir, f"generator_epoch_{epoch}.pth"))
-    G.load_state_dict(checkpoint['model_state'])
+    G.load_state_dict(checkpoint)
     test_dataset = FragmentDataset(dataset_dir, 'vox', resolution=initial_data_resolution, train=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     G.eval()
-    correct = 0
     total = 0
     test_DSC = 0.0
     test_JD = 0.0
@@ -55,13 +53,17 @@ def test(G, epoch):
             real_frag = data[0].to(available_device).float()
             real_vox = data[0].to(available_device).float()
             real_frag = real_frag.unsqueeze(1)
+            #print(real_frag.shape)
             real_vox = real_vox.unsqueeze(1)
             batch_size = real_frag.size(0)
             
+            real_frag = real_frag.cpu().detach().numpy()
             fake, mesh_frag = generate(G, real_vox)
+            #print(fake.shape)
             test_DSC += DSC(fake, real_frag)
             test_JD += JD(fake, real_frag)
             test_MSE += MSE(fake, real_frag)
+            total += 1
 
         test_DSC /= total
         test_JD /= total

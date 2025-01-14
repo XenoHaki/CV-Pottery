@@ -156,7 +156,7 @@ def train(args):
         if (epoch + 1) % 5 == 0:
             torch.save(G.state_dict(), os.path.join(result_save_dir, f"generator_epoch_{epoch+1}.pth"))
             torch.save(D.state_dict(), os.path.join(result_save_dir, f"discriminator_epoch_{epoch+1}.pth"))
-            test_DSC, test_JD, test_MSE = test(G, epoch + 1, result_save_dir)  # You can call your test function here
+            test_DSC, test_JD, test_MSE = test(G, epoch + 1)  # You can call your test function here
             writer.add_scalar('DSC/Epoch',test_DSC,epoch+1)
             writer.add_scalar('JD/Epoch',test_JD,epoch+1)
             writer.add_scalar('MSE/Epoch',test_MSE,epoch+1)
@@ -173,6 +173,7 @@ if __name__ == "__main__":
     # 添加一个可选的布尔参数
     parser.add_argument('--verbose', action='store_true', help='Enable verbose mode.')
     parser.add_argument('--run', type=str, default='train', help='train or test')
+    parser.add_argument('--epoch', type=int, default=30, help='test model epochs')
     # TODO
     # 解析命令行参数
     args = parser.parse_args()
@@ -180,8 +181,10 @@ if __name__ == "__main__":
         train(args)
         writer.flush()
     elif args.run == 'test':
-        test(args)
+        Z_latent_space = 64
+        test(Generator(Z_latent_space), args.epoch)
     writer.close()
 
 # tensorboard --logdir=runs
-# python training --run=train
+# python training.py --run=train
+# python training.py --run=test --epoch=5
