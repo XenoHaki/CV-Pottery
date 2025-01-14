@@ -98,7 +98,7 @@ def plot(voxel_matrix, save_dir, idx):
     fig = go.Figure(data=go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=\
                     dict(size=5, symbol='square', color='#ceabb2', line=dict(width=2,color='DarkSlateGrey',))))
     fig.update_layout()
-    #fig.show()
+    fig.show()
     if save_dir:
         fig.write_html(f'{save_dir}/pottery_vox_plot_{idx}.html')
     

@@ -97,33 +97,37 @@ class FragmentDataset(Dataset):
         # TODO
         frag_id = np.unique(voxel)[1:]
         select_frag = np.random.choice(frag_id)
+        vox = np.zeros_like(voxel)
         for f in frag_id:
             if f == select_frag:
-                voxel[voxel == f] = 1
+                vox[voxel == f] = 1
             else:
-                voxel[voxel == f] = 0
-        return voxel, select_frag
+                vox[voxel == f] = 0
+        return vox, select_frag
         
     def __non_select_fragment__(self, voxel, select_frag):
         # difference set of voxels in __select_fragment__. We provide some hints to you
         frag_id = np.unique(voxel)[1:]
+        #print(frag_id)
+        vox = np.zeros_like(voxel)
         for f in frag_id:
-            if not(f in select_frag):
-                voxel[voxel == f] = 1
+            if f == select_frag:
+                vox[voxel == f] = 0
             else:
-                voxel[voxel == f] = 0
-        return voxel
+                vox[voxel == f] = 1
+        return vox
 
     def __select_fragment_specific__(self, voxel, select_frag):
         # pick designated piece of fragments in voxel
-        # TODO\
+        # TODO
         frag_id = np.unique(voxel)[1:]
+        vox = np.zeros_like(voxel)
         for f in frag_id:
-            if f in select_frag:
-                voxel[voxel == f] = 1
+            if f == select_frag:
+                vox[voxel == f] = 1
             else:
-                voxel[voxel == f] = 0
-        return voxel, select_frag
+                vox[voxel == f] = 0
+        return vox, select_frag
 
     def __getitem__(self, idx):
         # 1. get img_path for one item in self.vox_files
@@ -134,9 +138,10 @@ class FragmentDataset(Dataset):
         img_path = self.vox_files[idx]
         vox = self.__read_vox__(img_path)
         frag, select_frag = self.__select_fragment__(vox)
+        vox_wo_frag = self.__non_select_fragment__(vox, select_frag)
         if self.transform:
             frag = self.transform(frag)
-        return frag, vox, select_frag#, int(label)-1, img_path
+        return frag, vox_wo_frag, select_frag#, int(label)-1, img_path
 
     def __getitem_specific_frag__(self, idx, select_frag):
         # TODO
@@ -145,9 +150,10 @@ class FragmentDataset(Dataset):
         img_path = self.vox_files[idx]
         vox = self.__read_vox__(img_path)
         frag, select_frag = self.__select_fragment_specific__(vox, select_frag)
+        vox_wo_frag = self.__non_select_fragment__(vox, select_frag)
         if self.transform:
             frag = self.transform(frag)
-        return frag, vox, select_frag #, int(label)-1, img_path
+        return frag, vox_wo_frag, select_frag #, int(label)-1, img_path
 
     def __getfractures__(self, idx):
         img_path = self.vox_files[idx]

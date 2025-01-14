@@ -22,15 +22,17 @@ class Discriminator(torch.nn.Module):
         # Dele return in __init__
         # TODO
         super().__init__()
-        self.conv1 = nn.Conv3d(in_channels=1, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.conv1 = nn.Conv3d(in_channels=1, out_channels=32, kernel_size=5, stride=1, padding=2)
         self.bn1 = nn.BatchNorm3d(32)
-        self.conv2 = nn.Conv3d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1)
-        self.bn2 = nn.BatchNorm3d(64)
-        self.conv3 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1)
-        self.bn3 = nn.BatchNorm3d(128)
-        self.conv4 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1) # 2*2*2,channel=512
-        self.bn4 = nn.BatchNorm3d(256)
-        self.conv5 = nn.Conv3d(in_channels=256, out_channels=1, kernel_size=3, stride=2, padding=1)        
+        self.conv2 = nn.Conv3d(in_channels=32, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.bn2 = nn.BatchNorm3d(32)
+        self.conv3 = nn.Conv3d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.bn3 = nn.BatchNorm3d(64)
+        self.conv4 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1)
+        self.bn4 = nn.BatchNorm3d(128)
+        self.conv5 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1) # 2*2*2,channel=512
+        self.bn5 = nn.BatchNorm3d(256)
+        self.fc = nn.Linear(2048, 1)
         return
     
     
@@ -47,8 +49,10 @@ class Discriminator(torch.nn.Module):
         x=F.leaky_relu(x,negative_slope=0.2)
         x=self.bn4(self.conv4(x))
         x=F.leaky_relu(x,negative_slope=0.2)
-        x=self.conv5(x)
+        x=self.bn5(self.conv5(x))
+        x=F.leaky_relu(x,negative_slope=0.2)
         x=torch.flatten(x,1)
+        x=self.fc(x)
         out=torch.sigmoid(x)
         return out
         
@@ -83,6 +87,7 @@ class Generator(torch.nn.Module):
         self.bn7 = nn.BatchNorm3d(32)
         self.deconv4 = nn.ConvTranspose3d(in_channels=32, out_channels=1, kernel_size=4, stride=2, padding=1)#32*32*32 rebuild
         self.bn8 = nn.BatchNorm3d(1)
+        self.sig = nn.Sigmoid()
         return
     
         # you may also find torch.view() useful
@@ -108,7 +113,7 @@ class Generator(torch.nn.Module):
         x=self.bn7(self.deconv3(x))
         x=F.relu(x)
         x=self.bn8(self.deconv4(x))
-        x=F.relu(x)
+        x=self.sig(x)
         return x
     
     def forward(self, x):
