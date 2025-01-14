@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from utils.model import Generator, Discriminator
-from visualize import *
+from utils.visualize import *
 
 # Try to implement proper metric for test function
 def DSC(prediction, target):
@@ -65,10 +65,11 @@ def generate(model, vox_frag):
     '''
     generate model, doesn't guaruantee 100% correct
     '''
-    mesh_frag = torch.Tensor(vox_frag).unsqueeze(0).float().to(available_device)
+    mesh_frag = torch.Tensor(vox_frag).float().to(available_device)
+    #print(mesh_frag.shape)
     output_g_encode = model.forward_encode(mesh_frag)
     fake = model.forward_decode(output_g_encode)
-    fake = fake + (mesh_frag.unsqueeze(1))
+    fake = fake + mesh_frag
     fake = fake.detach().cpu().numpy()
     mesh_frag = mesh_frag.detach().cpu().numpy()
     return fake, mesh_frag
