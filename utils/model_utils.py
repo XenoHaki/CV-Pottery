@@ -70,6 +70,6 @@ def generate(model, vox_frag):
     output_g_encode = model.forward_encode(mesh_frag)
     fake = model.forward_decode(output_g_encode)
     fake = fake + mesh_frag
-    fake = fake.detach().cpu().numpy()
-    mesh_frag = mesh_frag.detach().cpu().numpy()
+    fake = fake.detach().cuda().numpy()
+    mesh_frag = mesh_frag.detach().cuda().numpy()
     return fake, mesh_frag
