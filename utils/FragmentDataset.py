@@ -74,18 +74,16 @@ class FragmentDataset(Dataset):
         model = parser.parse()
         res = self.dim_size
         voxel_np = model.to_dense()
+        #print(voxel_np.shape)
         if res == 32: # 下采样，选择每个2*2*2 block中最大的标签（不选最多的，防止出现一堆0）
             voxel_output = np.zeros((res, res, res), dtype=voxel_np.dtype)
             for i in range(res):
                 for j in range(res):
                     for k in range(res):
-                        block = voxel_np[i*2:(i+1)*2, j*2:(j+1)*2, k*2:(k+1)*2]
-                        non_zero_values = block[block != 0]
-                
-                        if non_zero_values.size > 0:
-                            voxel_output[i, j, k] = np.max(non_zero_values)
-                        else:
+                        if i*2 >= voxel_np.shape[0] or j*2 >= voxel_np.shape[1] or k*2 >= voxel_np.shape[2]: 
                             voxel_output[i, j, k] = 0
+                        else:
+                            voxel_output[i, j, k] = voxel_np[i*2, j*2, k*2]
 
             return voxel_output
         else: return voxel_np
@@ -97,33 +95,37 @@ class FragmentDataset(Dataset):
         # TODO
         frag_id = np.unique(voxel)[1:]
         select_frag = np.random.choice(frag_id)
+        vox = np.zeros_like(voxel)
         for f in frag_id:
             if f == select_frag:
-                voxel[voxel == f] = 1
+                vox[voxel == f] = 1
             else:
-                voxel[voxel == f] = 0
-        return voxel, select_frag
+                vox[voxel == f] = 0
+        return vox, select_frag
         
     def __non_select_fragment__(self, voxel, select_frag):
         # difference set of voxels in __select_fragment__. We provide some hints to you
         frag_id = np.unique(voxel)[1:]
+        #print(frag_id)
+        vox = np.zeros_like(voxel)
         for f in frag_id:
-            if not(f in select_frag):
-                voxel[voxel == f] = 1
+            if f == select_frag:
+                vox[voxel == f] = 0
             else:
-                voxel[voxel == f] = 0
-        return voxel
+                vox[voxel == f] = 1
+        return vox
 
     def __select_fragment_specific__(self, voxel, select_frag):
         # pick designated piece of fragments in voxel
         # TODO
         frag_id = np.unique(voxel)[1:]
+        vox = np.zeros_like(voxel)
         for f in frag_id:
-            if f in select_frag:
-                voxel[voxel == f] = 1
+            if f == select_frag:
+                vox[voxel == f] = 1
             else:
-                voxel[voxel == f] = 0
-        return voxel, select_frag
+                vox[voxel == f] = 0
+        return vox, select_frag
 
     def __getitem__(self, idx):
         # 1. get img_path for one item in self.vox_files
@@ -134,9 +136,10 @@ class FragmentDataset(Dataset):
         img_path = self.vox_files[idx]
         vox = self.__read_vox__(img_path)
         frag, select_frag = self.__select_fragment__(vox)
+        vox_wo_frag = self.__non_select_fragment__(vox, select_frag)
         if self.transform:
             frag = self.transform(frag)
-        return frag, vox, select_frag#, int(label)-1, img_path
+        return frag, vox_wo_frag, select_frag#, int(label)-1, img_path
 
     def __getitem_specific_frag__(self, idx, select_frag):
         # TODO
@@ -145,9 +148,10 @@ class FragmentDataset(Dataset):
         img_path = self.vox_files[idx]
         vox = self.__read_vox__(img_path)
         frag, select_frag = self.__select_fragment_specific__(vox, select_frag)
+        vox_wo_frag = self.__non_select_fragment__(vox, select_frag)
         if self.transform:
             frag = self.transform(frag)
-        return frag, vox, select_frag #, int(label)-1, img_path
+        return frag, vox_wo_frag, select_frag #, int(label)-1, img_path
 
     def __getfractures__(self, idx):
         img_path = self.vox_files[idx]

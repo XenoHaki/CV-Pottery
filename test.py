@@ -51,20 +51,21 @@ def test(G, epoch):
     with torch.no_grad():
         for i, data in tqdm(enumerate(test_loader), total=len(test_loader)):
             real_frag = data[0].to(available_device).float()
-            real_vox = data[0].to(available_device).float()
+            real_vox_wo_frag = data[1].to(available_device).float()
+            real_vox = (data[0] + data[1]).to(available_device).float()
             real_frag = real_frag.unsqueeze(1)
-            #print(real_frag.shape)
+            real_vox_wo_frag = real_vox_wo_frag.unsqueeze(1)
             real_vox = real_vox.unsqueeze(1)
-            batch_size = real_frag.size(0)
+            #print(real_frag.shape)
             
             real_frag = real_frag.cpu().detach().numpy()
-            fake, mesh_frag = generate(G, real_vox)
+            fake, mesh_frag = generate(G, real_vox_wo_frag)
             #print(fake.shape)
             test_DSC += DSC(fake, real_frag)
             test_JD += JD(fake, real_frag)
             test_MSE += MSE(fake, real_frag)
             total += 1
-
+            
         test_DSC /= total
         test_JD /= total
         test_MSE /= total
