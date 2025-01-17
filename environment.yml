@@ -64,7 +64,7 @@ dependencies:
   - pygments
   - python-dateutil
   - python-fastjsonschema
-  - pyreadline
+ # - pyreadline
   - six
   - sleef
   - sqlite
