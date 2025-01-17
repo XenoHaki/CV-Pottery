@@ -52,13 +52,13 @@ def train(args):
     Z_latent_space = 64
     epochs = 10
     loss_function = 'BCE'
-    generator_learning_rate = 0.0005
+    generator_learning_rate = 0.002
     discriminator_learning_rate = 0.0002
     initial_data_resolution = 32
     optimizer = 'ADAM'
     beta1 = 0.9
     beta2 = 0.999
-    batch_size = 16
+    batch_size = 32
     training_interval = 1
     available_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_dir = "./data"
@@ -99,7 +99,7 @@ def train(args):
         loss_D = 0.0
         
         for i, data in tqdm(enumerate(train_loader), total=len(train_loader)):
-            #if i == 10: break
+            if i == 50: break
             #plot(data[0][0], "./figures", 1)
             #plot(data[2][0], "./figures",66)
             #plot(data[0][0] + data[1][0], "./figures", 3)
@@ -118,55 +118,53 @@ def train(args):
         # remember to stop gradients in testing!
         
             # Train the Discriminator
-            if epoch % (2 * training_interval) < training_interval:
+            #if epoch % (2 * training_interval) < training_interval:
 
-                optimizer_D.zero_grad()
-                outputs_real = D(real_vox)
-                loss_D_real = criterion(outputs_real.squeeze(1), real_labels)
+            optimizer_D.zero_grad()
+            outputs_real = D(real_vox)
+            loss_D_real = criterion(outputs_real.squeeze(1), real_labels)
                 #print(outputs_real.squeeze(1))
                 #print(real_labels)
                 #print(loss_D_real)
 
                 #z = torch.randn(batch_size, Z_latent_space).to(available_device)
-                fake_data = G(real_vox_wo_frag)
+            fake_data = G(real_vox_wo_frag)
                 #plot_join(fake_data.cpu().detach().numpy()[0][0], real_frag.cpu().detach().numpy()[0][0], "./figures/test", i)
                 #print(fake_data.shape)
                 #print(fake_data.shape)
                 #print(fake_data.cpu().detach().numpy()[0][0].dtype())
 
-                outputs_fake = D(fake_data + real_vox_wo_frag)
-                loss_D_fake = criterion(outputs_fake.squeeze(1), fake_labels)
+            outputs_fake = D(fake_data + real_vox_wo_frag)
+            loss_D_fake = criterion(outputs_fake.squeeze(1), fake_labels)
 
-                loss_D = loss_D_real + loss_D_fake
-                loss_D.backward()
-                optimizer_D.step()
-                if i % 10 == 0:
-                    print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
-                          f"Loss D: {loss_D.item():.4f}")
-                    writer.add_scalar('Loss_D / Training', loss_D, log_D)
-                    log_D += 1
+            loss_D = loss_D_real + loss_D_fake
+            loss_D.backward()
+            optimizer_D.step()
+            if i % 10 == 0:
+                print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
+                      f"Loss D: {loss_D.item():.4f}")
+                writer.add_scalar('Loss_D / Training', loss_D, log_D)
+                log_D += 1
             
-            else:
             # Train the Generator
 
-                optimizer_G.zero_grad()
-                fake_data = G(real_vox_wo_frag)
-                outputs_fake = D(fake_data + real_vox_wo_frag)
-                loss_G = criterion(outputs_fake.squeeze(1), real_labels)
-                print()
-                #loss_G = torch.log_(1 - loss_G)
+            optimizer_G.zero_grad()
+            fake_data = G(real_vox_wo_frag)
+            outputs_fake = D(fake_data + real_vox_wo_frag)
+            loss_G = criterion(outputs_fake.squeeze(1), real_labels)
+            #loss_G = torch.log_(1 - loss_G + 1e-8)
 
-                loss_G.backward()
-                optimizer_G.step()
+            loss_G.backward()
+            optimizer_G.step()
                 
-                if i % 10 == 0:
-                    print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
-                          f"Loss G: {loss_G.item():.4f}")
-                    writer.add_scalar('Loss_G / Training', loss_G, log_G)
-                    log_G += 1
+            if i % 10 == 0:
+                print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
+                      f"Loss G: {loss_G.item():.4f}")
+                writer.add_scalar('Loss_G / Training', loss_G, log_G)
+                log_G += 1
 
             # Logs(
-        if (epoch + 1) % (training_interval * 2) == 0:
+        if (epoch + 1) % (training_interval) == 0:
             #print(f"[Epoch {epoch+1}/{epochs}] [Batch {i}/{len(train_loader)}] "
                   #f"Loss D: {loss_D:.4f}, Loss G: {loss_G.item():.4f}")
             plot_join(fake_data.cpu().detach().numpy()[0][0], real_vox.cpu().detach().numpy()[0][0], "./figures", epoch+1)
